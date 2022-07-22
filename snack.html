@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      html,
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 0;
+        height: 100vh;
+      }
+      canvas {
+        max-width: 100%;
+      }
+      .panel {
+        position: absolute;
+        color: aliceblue;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+      }
+      button {
+        background-color: transparent;
+        border-radius: 20px;
+        color: white;
+        padding: 5px 10px;
+        cursor: pointer;
+        outline: none;
+      }
+      button:hover {
+        background-color: #fff;
+        color: black;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="panel">
+      <h2>Score: 0</h2>
+      <button onclick="game.startGame()">start Game</button>
+    </div>
+    <canvas id="mycanvas"> </canvas>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.17/Tone.js"
+      integrity="sha512-EIXtbmVz5SVaJkojf2cSv73z6rh3PKBHOdXVvHEUjHSYrIQd1RaaJnosglDSXuMaRxZr5rk6QdYGm2WcZX/U1Q=="
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"
+      integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg=="
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      console.clear();
+      // 向量類別
+
+      class Vector {
+        constructor(x, y) {
+          this.x = x || 0;
+          this.y = y || 0;
+        }
+
+        add(v) {
+          return new Vector(this.x + v.x, this.y + v.y);
+        }
+
+        move(x, y) {
+          this.x += x;
+          this.y += y;
+          return this;
+        }
+
+        sub(v) {
+          return new Vector(this.x - v.x, this.y - v.y);
+        }
+
+        toString() {
+          return `(${this.x},${this.y})`;
+        }
+
+        mul(s) {
+          return new Vector(this.x * s, this.y * s);
+        }
+
+        length() {
+          return Math.sqrt(this.x * this.x + this.y * this.y);
+        }
+
+        set(x, y) {
+          this.x = x;
+          this.y = y;
+          return this;
+        }
+
+        equal(v) {
+          return this.x == v.x && this.y == v.y;
+        }
+
+        clone() {
+          return new Vector(this.x, this.y);
+        }
+
+        angle() {
+          // 轉角度
+          return Math.atan2(this.y, this.x);
+        }
+      }
+
+      class Snake {
+        constructor(x, y) {
+          this.body = [];
+          this.maxLenght = 5;
+          this.head = new Vector();
+          this.speed = new Vector(1, 0);
+          this.direction = "Right";
+        }
+
+        update() {
+          let newHead = this.head.add(this.speed);
+          this.body.push(this.head);
+          this.head = newHead;
+          if (this.body.length > this.maxLenght) {
+            this.body.shift();
+          }
+        }
+
+        setDirection(dir) {
+          let target;
+          if (dir == "Up") {
+            target = new Vector(0, -1);
+          }
+          if (dir == "Down") {
+            target = new Vector(0, 1);
+          }
+          if (dir == "Left") {
+            target = new Vector(-1, 0);
+          }
+          if (dir == "Right") {
+            target = new Vector(1, 0);
+          }
+
+          if (target.equal(this.speed.mul(-1)) == false) {
+            this.speed = target;
+          }
+        }
+
+        checkBoundary(gameWidth) {
+          let xInRange = 0 <= this.head.x && this.head.x < gameWidth;
+          let yInRange = 0 <= this.head.y && this.head.y < gameWidth;
+
+          return xInRange && yInRange;
+        }
+      }
+
+      class Game {
+        constructor() {
+          this.bw = 12;
+          this.bs = 2;
+          this.gameWidth = 40;
+          this.speed = 30;
+          this.snake = new Snake();
+          this.foods = [];
+          this.start = false;
+        }
+
+        startGame() {
+          this.start = true;
+          this.snake = new Snake();
+          let pan = document.querySelector(".panel");
+          pan.style.display = "none";
+          this.playSound("C#5", -20);
+          this.playSound("E2", -20, 200);
+        }
+
+        endGame() {
+          this.start = false;
+          let pan = document.querySelector(".panel");
+          let score = document.querySelector("h2");
+          score.innerHTML = `Score: ${(this.snake.maxLenght - 5) * 10}`;
+          pan.style.display = "flex";
+          this.playSound("A3");
+          this.playSound("E2", -10, 200);
+          this.playSound("A2", -10, 400);
+        }
+
+        getPosiition(x, y) {
+          return new Vector(
+            x * this.bw + (x - 1) * this.bs,
+            y * this.bw + (y - 1) * this.bs
+          );
+        }
+
+        drawBlock(v, color) {
+          this.ctx.fillStyle = color;
+          let pos = this.getPosiition(v.x, v.y);
+          this.ctx.fillRect(pos.x, pos.y, this.bw, this.bw);
+        }
+
+        drawEffect(x, y) {
+          let r = 2;
+          let pos = this.getPosiition(x, y);
+          let effect = () => {
+            r++;
+            this.ctx.strokeStyle = `rgba(255,0,0,${(100 - r) / 100})`;
+            this.ctx.beginPath();
+            this.ctx.arc(
+              pos.x + this.bw / 2,
+              pos.y + this.bw / 2,
+              r,
+              0,
+              Math.PI * 2
+            );
+            this.ctx.stroke();
+
+            if (r < 100) {
+              requestAnimationFrame(effect);
+            }
+          };
+          requestAnimationFrame(effect);
+        }
+
+        generateFood() {
+          let x = parseInt(Math.random() * this.gameWidth);
+          let y = parseInt(Math.random() * this.gameWidth);
+          this.foods.push(new Vector(x, y));
+          this.drawEffect(x, y);
+          this.playSound("E5", -20);
+          this.playSound("A5", -20, 50);
+        }
+
+        init() {
+          this.canvas = document.getElementById("mycanvas");
+          this.canvas.width =
+            this.bw * this.gameWidth + this.bs * (this.gameWidth - 1);
+          this.canvas.height = this.canvas.width;
+          this.ctx = this.canvas.getContext("2d");
+          this.render();
+          this.update();
+          this.generateFood();
+        }
+
+        render() {
+          // 背景 + 格子
+          this.ctx.fillStyle = "rgba(0,0,0,0.3)";
+          this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+          for (let x = 0; x < this.gameWidth; x++) {
+            for (let y = 0; y < this.gameWidth; y++) {
+              this.drawBlock(new Vector(x, y), "rgba(255,255,255,0.03)");
+            }
+          }
+
+          this.snake.body.forEach((sp, index) => {
+            this.drawBlock(sp, "white");
+          });
+
+          this.foods.forEach((item) => {
+            this.drawBlock(item, "red");
+          });
+
+          requestAnimationFrame(() => {
+            this.render();
+          });
+        }
+
+        update() {
+          if (this.start) {
+            this.playSound("A2", -30);
+            this.snake.update();
+            this.foods.forEach((food, i) => {
+              if (this.snake.head.equal(food)) {
+                this.snake.maxLenght++;
+                this.foods.splice(i, 1);
+                this.generateFood();
+              }
+            });
+          }
+
+          this.snake.body.forEach((bp, index) => {
+            if (this.snake.head.equal(bp)) {
+              this.endGame();
+            }
+          });
+
+          if (this.snake.checkBoundary(this.gameWidth) == false) {
+            this.endGame();
+          }
+
+          setTimeout(() => {
+            this.update();
+          }, 50);
+        }
+
+        playSound(note, volumn, when) {
+          setTimeout(() => {
+            let synth = new Tone.Synth().toDestination();
+            synth.volumn = volumn || -12;
+            synth.triggerAttackRelease(note, "8n");
+          }, when || 0);
+        }
+      }
+
+      let game = new Game();
+      game.init();
+      $(window).keydown(function (evt) {
+        console.log(evt.key);
+        game.snake.setDirection(evt.key.replace("Arrow", ""));
+      });
+    </script>
+  </body>
+</html>

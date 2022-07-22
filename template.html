@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+      }
+      canvas {
+        max-width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="mycanvas"></canvas>
+
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"
+      integrity="sha512-LF8ZB1iTwi4Qvkm4pekHG4a437Y9Af5ZuwbnW4GTbAWQeR2E4KW8WF+xH8b9psevV7wIlDMx1MH9YfPqgKhA/Q=="
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      // env
+      let updateFPS = 30;
+      let showMouse = true;
+      let time = 0;
+      let bgColor = "black";
+
+      // 控制
+      let controls = {
+        value: 0,
+        degree: 0,
+      };
+
+      let gui = new dat.GUI();
+      gui
+        .add(controls, "degree", 0, Math.PI)
+        .step(0.01)
+        .onChange(function (value) {});
+
+      //-------
+      /**
+       *
+       * vec2
+       */
+
+      class Vec2 {
+        constructor(x, y) {
+          this.x = x;
+          this.y = y;
+        }
+
+        set(x, y) {
+          this.x = x;
+          this.y = y;
+        }
+
+        move(x, y) {
+          this.x += x;
+          this.y += y;
+        }
+
+        add(v) {
+          return new Vec2(this.x + v.x, this.y + v.y);
+        }
+
+        sub(v) {
+          return new Vec2(this.x - v.x, this.y - v.y);
+        }
+
+        mul(s) {
+          return new Vec2(this.x * s, this.y * s);
+        }
+
+        clone() {
+          return new Vec2(this.x, this.y);
+        }
+
+        toString() {
+          return `(${this.x}, ${this.y})`;
+        }
+
+        equal(v) {
+          return this.x === v.x && this.y === v.y;
+        }
+
+        get angle() {
+          return Math.atan2(this.y, this.x);
+        }
+
+        get unit() {
+          return this.mul(1 / this.length);
+        }
+
+        get length() {
+          return Math.sqrt(this.x ** 2 + this.y ** 2);
+        }
+        set length(nv) {
+          let temp = this.unit.mul(nv);
+          this.set(temp.x, temp.y);
+        }
+      }
+
+      //------- 定義變數
+
+      let canvas = document.getElementById("mycanvas");
+      let ctx = canvas.getContext("2d");
+
+      let ww, wh;
+
+      // 滑鼠、事件、與紀錄
+      let mousePos = new Vec2(0, 0);
+      let mouseDown = new Vec2(0, 0);
+      let mouseUp = new Vec2(0, 0);
+
+      //------- 擴充方法
+      ctx.circle = function (v, r) {
+        this.arc(v.x, v.y, r, 0, Math.PI / 2);
+      };
+
+      ctx.line = function (v1, v2) {
+        this.moveTo(v1.x, v1.y);
+        this.lineTo(v2.x, v2.y);
+      };
+
+      // canvas設定
+      function initCanvas() {
+        ww = canvas.width = window.innerWidth;
+        wh = canvas.height = window.innerHeight;
+      }
+      initCanvas();
+
+      // 邏輯初始化
+      function init() {}
+      // 遊戲邏輯更新
+      function update() {
+        time++;
+      }
+      function draw() {
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, ww, wh);
+
+        // ------- 從這裡開始繪製 --------
+
+        ctx.save();
+        ctx.translate(mousePos.x, mousePos.y);
+        ctx.rotate(controls.degree); //調整旋轉
+        // ctx.rotate(time / 100); //自動旋轉
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, 30, 30);
+        ctx.restore();
+
+        // ------- 從這裡開始繪製 --------
+        // 滑鼠
+
+        ctx.fillStyle = "red";
+        ctx.beginPath();
+        ctx.circle(mousePos, 3);
+        ctx.fill();
+
+        ctx.save();
+
+        ctx.beginPath();
+        ctx.translate(mousePos.x, mousePos.y);
+        ctx.strokeStyle = "red";
+        let len = 20;
+        ctx.line(new Vec2(-len, 0), new Vec2(len, 0));
+        ctx.fillText(mousePos, 10, -10);
+        ctx.rotate(Math.PI / 2);
+        ctx.line(new Vec2(-len, 0), new Vec2(len, 0));
+        ctx.stroke();
+
+        ctx.restore();
+
+        requestAnimationFrame(draw);
+      }
+      // 頁面載入
+      function loaed() {
+        initCanvas();
+        init();
+        requestAnimationFrame(draw);
+        setInterval(update, 1000 / updateFPS);
+      }
+
+      loaed();
+      // 載入
+      window.addEventListener("load", loaed);
+      // 縮放
+      window.addEventListener("resize", initCanvas);
+
+      window.addEventListener("mousemove", mousemove);
+      window.addEventListener("mouseup", mouseup);
+      window.addEventListener("mousedown", mousedown);
+
+      function mousemove(evt) {
+        mousePos.set(evt.x, evt.y);
+      }
+      function mouseup(evt) {
+        mousePos.set(evt.x, evt.y);
+        mousePosUp = mousePos.clone();
+      }
+      function mousedown(evt) {
+        mousePos.set(evt.x, evt.y);
+        mousePosdown = mousePos.clone();
+      }
+    </script>
+  </body>
+</html>

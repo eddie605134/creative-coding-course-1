@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+      }
+      canvas {
+        max-width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="mycanvas"></canvas>
+
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"
+      integrity="sha512-LF8ZB1iTwi4Qvkm4pekHG4a437Y9Af5ZuwbnW4GTbAWQeR2E4KW8WF+xH8b9psevV7wIlDMx1MH9YfPqgKhA/Q=="
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      // env
+      let updateFPS = 30;
+      let showMouse = true;
+      let time = 0;
+      let bgColor = "black";
+
+      // 控制
+      let controls = {
+        draw: function () {
+          ctx.fillStyle = "black";
+          ctx.fillRect(0, 0, ww, wh);
+          tree = [];
+          trees.push(new Tree());
+        },
+      };
+
+      let gui = new dat.GUI();
+      gui.add(controls, "draw");
+
+      //-------
+      /**
+       *
+       * vec2
+       */
+
+      class Vec2 {
+        constructor(x, y) {
+          this.x = x;
+          this.y = y;
+        }
+
+        set(x, y) {
+          this.x = x;
+          this.y = y;
+        }
+
+        move(x, y) {
+          this.x += x;
+          this.y += y;
+        }
+
+        add(v) {
+          return new Vec2(this.x + v.x, this.y + v.y);
+        }
+
+        sub(v) {
+          return new Vec2(this.x - v.x, this.y - v.y);
+        }
+
+        mul(s) {
+          return new Vec2(this.x * s, this.y * s);
+        }
+
+        clone() {
+          return new Vec2(this.x, this.y);
+        }
+
+        toString() {
+          return `(${this.x}, ${this.y})`;
+        }
+
+        equal(v) {
+          return this.x === v.x && this.y === v.y;
+        }
+
+        get angle() {
+          return Math.atan2(this.y, this.x);
+        }
+
+        get unit() {
+          return this.mul(1 / this.length);
+        }
+
+        get length() {
+          return Math.sqrt(this.x ** 2 + this.y ** 2);
+        }
+        set length(nv) {
+          let temp = this.unit.mul(nv);
+          this.set(temp.x, temp.y);
+        }
+      }
+
+      //------- 定義變數
+
+      let canvas = document.getElementById("mycanvas");
+      let ctx = canvas.getContext("2d");
+
+      let ww, wh;
+
+      // 滑鼠、事件、與紀錄
+      let mousePos = new Vec2(0, 0);
+      let mouseDown = new Vec2(0, 0);
+      let mouseUp = new Vec2(0, 0);
+
+      //------- 擴充方法
+      ctx.circle = function (v, r) {
+        this.arc(v.x, v.y, r, 0, Math.PI / 2);
+      };
+
+      ctx.line = function (v1, v2) {
+        this.moveTo(v1.x, v1.y);
+        this.lineTo(v2.x, v2.y);
+      };
+
+      // canvas設定
+      function initCanvas() {
+        ww = canvas.width = window.innerWidth;
+        wh = canvas.height = window.innerHeight;
+      }
+      initCanvas();
+
+      class Tree {
+        constructor(args) {
+          let def = {
+            p: new Vec2(0, 0),
+            angle: -Math.PI / 2,
+            speed: 4,
+            w: 10,
+            time: 0,
+          };
+          Object.assign(def, args);
+          Object.assign(this, def);
+        }
+
+        draw() {
+          if (this.w > 0) {
+            ctx.beginPath();
+            ctx.arc(this.p.x, this.p.y, this.w, 0, Math.PI * 2);
+            ctx.fillStyle = "white";
+            ctx.fill();
+          }
+        }
+
+        update() {
+          this.time++;
+          this.v = new Vec2(Math.cos(this.angle), Math.sin(this.angle)).mul(
+            this.speed
+          );
+          this.w *= Math.random() * 0.02 + 0.98;
+          this.p = this.p.add(this.v);
+
+          if (
+            Math.random() < 0.6 + this.w / 50 &&
+            this.time > 15 &&
+            this.time % 15 == 0 &&
+            this.w > 0.5
+          ) {
+            this.angle += (Math.random() - 0.5) / 5;
+            if (Math.random() < 0.5) {
+              trees.push(
+                new Tree({
+                  p: this.p.clone(),
+                  angle: this.angle + (Math.random() - 0.5) / 2,
+                  speed: this.speed / (1.2 + Math.random()),
+                  w: this.w * (0.45 + 0.5 * Math.random()),
+                })
+              );
+            } else {
+              trees.push(
+                new Tree({
+                  p: this.p.clone(),
+                  angle: this.angle + (Math.random() - 0.5) / 3,
+                  speed: this.speed / (1.2 + Math.random()),
+                  w: this.w * (0.45 + 0.5 * Math.random()),
+                })
+              );
+
+              trees.push(
+                new Tree({
+                  p: this.p.clone(),
+                  angle: this.angle - (Math.random() - 0.5) / 3,
+                  speed: this.speed / (1.2 + Math.random()),
+                  w: this.w * (0.45 + 0.5 * Math.random()),
+                })
+              );
+
+              this.w = 0;
+            }
+
+            if (Math.random() < 0.3) {
+              this.w = 0;
+            }
+          }
+
+          if (this.w > 0.1 && this.w < 2 && Math.random() < 0.1) {
+            ctx.beginPath();
+            ctx.arc(this.p.x, this.p.y, Math.random() * 4, 0, Math.PI * 2);
+            ctx.fillStyle = `hsl(${Math.random() * 50}, 80%, 50%)`;
+            ctx.fill();
+          }
+        }
+      }
+
+      let tree;
+      let trees = [];
+
+      // 邏輯初始化
+      function init() {
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, ww, wh);
+        tree = new Tree({
+          p: new Vec2(0, 0),
+          angle: -Math.PI / 2,
+        });
+        trees.push(tree);
+      }
+      // 遊戲邏輯更新
+      function update() {
+        time++;
+      }
+      function draw() {
+        ctx.fillStyle = bgColor;
+        // ctx.fillRect(0, 0, ww, wh);
+
+        // ------- 從這裡開始繪製 --------
+
+        ctx.save();
+        ctx.translate(ww / 2, wh);
+        trees.forEach((tree) => tree.update());
+        trees.forEach((tree) => tree.draw());
+
+        ctx.restore();
+
+        // ------- 從這裡開始繪製 --------
+        // 滑鼠
+
+        requestAnimationFrame(draw);
+      }
+      // 頁面載入
+      function loaed() {
+        initCanvas();
+        init();
+        requestAnimationFrame(draw);
+        setInterval(update, 1000 / updateFPS);
+      }
+
+      loaed();
+      // 載入
+      window.addEventListener("load", loaed);
+      // 縮放
+      window.addEventListener("resize", initCanvas);
+
+      window.addEventListener("mousemove", mousemove);
+      window.addEventListener("mouseup", mouseup);
+      window.addEventListener("mousedown", mousedown);
+
+      function mousemove(evt) {
+        mousePos.set(evt.x, evt.y);
+      }
+      function mouseup(evt) {
+        mousePos.set(evt.x, evt.y);
+        mousePosUp = mousePos.clone();
+      }
+      function mousedown(evt) {
+        mousePos.set(evt.x, evt.y);
+        mousePosdown = mousePos.clone();
+      }
+    </script>
+  </body>
+</html>

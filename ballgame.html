@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      .game {
+        width: 500px;
+        height: 500px;
+        border: 5px solid black;
+        position: relative;
+      }
+      .game .board,
+      .game .ball {
+        background-color: #000000;
+      }
+      .info {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        background-color: #fff;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="game">
+      <div class="board b1"></div>
+      <div class="board b2"></div>
+      <div class="ball"></div>
+      <div class="info">
+        <h2 class="infoText">Start Game</h2>
+        <button class="start" onclick="game.startGame()">Start Game</button>
+      </div>
+      <div class="grade"></div>
+    </div>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
+      integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ=="
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      class GameObject {
+        constructor(position, size, selector) {
+          this.$el = $(selector);
+          this.position = position;
+          this.size = size;
+          this.$el.css("position", "absolute");
+          this.updateCss();
+        }
+
+        updateCss() {
+          this.$el.css("left", this.position.x);
+          this.$el.css("top", this.position.y);
+          this.$el.css("width", this.size.width);
+          this.$el.css("height", this.size.height);
+        }
+
+        collide(otherObject) {
+          let inRangeX =
+            otherObject.position.x > this.position.x &&
+            otherObject.position.x < this.position.x + this.size.width;
+          let inRangeY =
+            otherObject.position.y > this.position.y &&
+            otherObject.position.y < this.position.y + this.size.height;
+          return inRangeX && inRangeY;
+        }
+      }
+
+      class Ball extends GameObject {
+        constructor() {
+          super({ x: 250, y: 250 }, { width: 15, height: 15 }, ".ball");
+        }
+        update() {
+          this.position.x += this.velocity.x;
+          this.position.y += this.velocity.y;
+          this.updateCss();
+          if (this.position.x < 0 || this.position.x > 500) {
+            this.velocity.x = -this.velocity.x;
+          }
+          if (this.position.y < 0 || this.position.y > 500) {
+            this.velocity.y = -this.velocity.y;
+          }
+        }
+        init() {
+          this.position = { x: 250, y: 250 };
+          let speed = 8;
+          let angle = Math.PI * 2 * Math.random();
+          this.velocity = {
+            x: speed * Math.cos(angle),
+            y: speed * Math.sin(angle),
+          };
+          this.update();
+        }
+      }
+
+      let ball = new Ball();
+
+      class Board extends GameObject {
+        constructor(pos, sel) {
+          super(pos, { width: 100, height: 15 }, sel);
+        }
+        updateCss() {
+          if (this.position.x < 0) {
+            this.position.x = 0;
+          }
+          if (this.position.x + this.size.width > 500) {
+            this.position.x = 500 - this.size.width;
+          }
+          super.updateCss();
+        }
+      }
+
+      let b1 = new Board({ x: 0, y: 30 }, ".b1");
+      let b2 = new Board({ x: 0, y: 455 }, ".b2");
+
+      class Game {
+        constructor() {
+          this.timer = null;
+          this.grade = 0;
+          this.initControl();
+          this.control = {};
+          ball.init();
+        }
+
+        initControl() {
+          const _this = this;
+          $(window).keydown(function (e) {
+            _this.control[e.key] = true;
+            console.log(_this.control);
+          });
+          $(window).keyup(function (e) {
+            _this.control[e.key] = false;
+            console.log(_this.control);
+          });
+        }
+
+        startGame() {
+          let time = 3;
+          this.grade = 0;
+          $("button").hide();
+          let timer_count = setInterval(() => {
+            $(".infoText").text(time);
+            time--;
+            if (time < 0) {
+              clearInterval(timer_count);
+              $(".info").hide();
+              this.startGameMain();
+            }
+          }, 1000);
+        }
+
+        startGameMain() {
+          this.timer = setInterval(() => {
+            if (b1.collide(ball)) {
+              ball.velocity.y = -ball.velocity.y;
+              ball.velocity.x *= 1.1;
+              ball.velocity.y *= 1.1;
+              ball.velocity.x += 0.5 - Math.random();
+              ball.velocity.y += 0.5 - Math.random();
+            }
+            if (b2.collide(ball)) {
+              ball.velocity.y = -ball.velocity.y;
+              this.grade = this.grade + 10;
+            }
+            if (ball.position.y <= 0) {
+              console.log("對手輸了");
+            }
+            if (ball.position.y >= 500) {
+              this.endGame("board1 lost");
+            }
+            if (this.control["ArrowLeft"]) {
+              b2.position.x -= 12;
+            }
+            if (this.control["ArrowRight"]) {
+              b2.position.x += 12;
+            }
+            b1.position.x +=
+              ball.position.x > b1.position.x + b1.size.width / 2 ? 8 : 0;
+            b1.position.x +=
+              ball.position.x < b1.position.x + b1.size.width / 2 ? -8 : 0;
+
+            b1.updateCss();
+            b2.updateCss();
+            console.log(b1.collide(ball));
+            ball.update();
+
+            $(".grade").text(this.grade);
+          }, 30);
+        }
+
+        endGame(result) {
+          clearInterval(this.timer);
+          $(".info").show();
+          $(".infoText").html(result + "</br>Sorce:" + this.grade);
+          $("button").show();
+        }
+      }
+
+      let game = new Game();
+    </script>
+  </body>
+</html>

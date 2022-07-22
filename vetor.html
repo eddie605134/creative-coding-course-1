@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100vh;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="myCanvas"> </canvas>
+    <script>
+      console.clear();
+      class Vector {
+        constructor(x, y) {
+          this.x = x;
+          this.y = y;
+        }
+
+        add(v) {
+          return new Vector(this.x + v.x, this.y + v.y);
+        }
+
+        move(x, y) {
+          this.x += x;
+          this.y += y;
+          return this;
+        }
+
+        sub(v) {
+          return new Vector(this.x - v.x, this.y - v.y);
+        }
+
+        toString() {
+          return `(${this.x},${this.y})`;
+        }
+
+        mul(s) {
+          return new Vector(this.x * s, this.y * s);
+        }
+
+        length() {
+          return Math.sqrt(this.x * this.x + this.y * this.y);
+        }
+
+        set(x, y) {
+          this.x = x;
+          this.y = y;
+          return this;
+        }
+
+        equal(v) {
+          return this.x == v.x && this.y == v.y;
+        }
+
+        clone() {
+          return new Vector(this.x, this.y);
+        }
+
+        angle() {
+          // 轉角度
+          return Math.atan2(this.y, this.x);
+        }
+      }
+
+      let canvas = document.querySelector("#myCanvas");
+      let ctx = canvas.getContext("2d");
+      ("2d");
+
+      let ww = (canvas.width = window.innerWidth);
+      let wh = (canvas.height = window.innerHeight);
+
+      function drawVector(v, trans) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.save();
+        ctx.rotate(v.angle());
+        ctx.fillText(v, v.length() / 2, 10);
+        ctx.lineTo(v.length(), 0);
+        ctx.lineTo(v.length() - 5, -4);
+        ctx.lineTo(v.length() - 5, 4);
+        ctx.lineTo(v.length(), 0);
+        ctx.strokeStyle = "black";
+        ctx.strokeWidth = 3;
+        ctx.stroke();
+
+        ctx.restore();
+        if (trans) {
+          ctx.translate(v.x, v.y);
+        }
+      }
+
+      let mousePos = new Vector(0, 0);
+      let con = false;
+      let timer;
+
+      canvas.addEventListener("mousemove", function (event) {
+        // console.log(event.x, event.y);
+        con = true;
+        mousePos = new Vector(event.x, event.y);
+      });
+
+      function draw() {
+        ctx.clearRect(0, 0, ww, wh);
+        let v1 = new Vector(250, 0);
+        let v2 = new Vector(0, 200);
+        let v3 = v1.add(v2).mul(-1);
+
+        let c = new Vector(ww / 2, wh / 2);
+        ctx.restore();
+        ctx.save();
+        ctx.translate(c.x, c.y);
+        let md = mousePos.sub(c);
+        drawVector(md.mul(1 / md.length()).mul(100), false);
+        ctx.restore();
+      }
+
+      timer = setInterval(draw, 30);
+    </script>
+  </body>
+</html>
